@@ -142,6 +142,20 @@ input[type=number]{direction:ltr;text-align:center}
 .empty{text-align:center;color:var(--muted);padding:22px;border:2px dashed var(--line);border-radius:16px}
 .empty .mini{display:flex;justify-content:center;gap:6px;margin-bottom:8px;font-size:1.6rem;color:var(--violet)}
 
+/* pot */
+.pot{display:flex;align-items:center;gap:16px;color:#fff;border-radius:18px;padding:16px 18px;margin-bottom:14px;
+  background:radial-gradient(120% 140% at 0% 0%, #8b5cf6 0%, #5b21b6 45%, #2e1065 100%);box-shadow:0 8px 24px rgba(76,29,149,.35)}
+.pot.bump{animation:bump .45s ease-out}
+@keyframes bump{40%{transform:scale(1.03)}}
+.stack{position:relative;width:52px;height:58px;flex:none}
+.stack .chip{position:absolute;left:0;width:52px;height:52px}
+.stack .chip:nth-child(1){top:6px}.stack .chip:nth-child(2){top:3px}.stack .chip:nth-child(3){top:0}
+.pot-main{flex:1;min-width:0}
+.pot-label{font-size:.9rem;color:#e4d9ff;font-weight:600}
+.pot-money{display:block;font-family:"Secular One",sans-serif;font-size:2rem;line-height:1.1;color:#fff}
+.pot-chips{display:block;font-weight:700;color:var(--gold)}
+.pot-meta{font-size:.85rem;color:#d6c8f5;text-align:end;flex:none;max-width:40%}
+tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none}
 /* summary */
 .check{border-radius:12px;padding:12px 14px;font-weight:600;margin-bottom:12px;border:1.5px solid var(--line)}
 .check.ok{border-color:var(--win);color:var(--win)}
@@ -230,6 +244,15 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px
   <section id="players-sec">
     <h2><span class="suit" aria-hidden="true">♣</span>שחקנים</h2>
     <p class="hint">כל קנייה נרשמת בנפרד, כולל קניות חוזרות. בסוף הערב רושמים כמה זיטונים נשארו לכל אחד.</p>
+    <div class="pot" id="pot" aria-live="polite">
+      <div class="stack" aria-hidden="true"><span class="chip f"></span><span class="chip v"></span><span class="chip g"></span></div>
+      <div class="pot-main">
+        <span class="pot-label">בקופה</span>
+        <b class="pot-money" id="potMoney">0 ₪</b>
+        <span class="pot-chips" id="potChips">0 זיטונים</span>
+      </div>
+      <div class="pot-meta" id="potMeta"></div>
+    </div>
     <div class="players" id="players"></div>
     <div class="add-player">
       <input type="text" id="newName" placeholder="שם שחקן חדש" enterkeyhint="done">
@@ -421,7 +444,10 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px
       c.rows.map(function(r){
         return '<tr><td>'+esc(r.name)+(c.best===r?'<span class="crown" title="המנצח של הערב">👑</span>':'')+'</td><td class="num">'+fmt(r.bought)+'</td><td class="num">'+(r.has?fmtC(r.final):'—')+'</td><td class="num">'+(r.has?fmt(r.worth):'—')+'</td>'+
         '<td class="num '+(r.net>0.004?'pos':r.net<-0.004?'neg':'')+'">'+(r.has?(r.net>0?'+':'')+fmt(r.net):'—')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
+      }).join('')+'</tbody>'+(function(){
+        var tb=0,tfc=0,tw=0;c.rows.forEach(function(r){tb+=r.bought;tfc+=r.final;tw+=r.worth;});
+        return '<tfoot><tr><td>סה״כ בקופה</td><td class="num">'+fmt(tb)+'</td><td class="num">'+(c.missing?'—':fmtC(tfc))+'</td><td class="num">'+(c.missing?'—':fmt(tw))+'</td><td></td></tr></tfoot>';
+      })()+'</table></div>';
     var sig='';
     if(!c.missing){
       if(c.tr.length){
@@ -440,7 +466,8 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px
   }
   function shareText(){
     var c=last;if(!c)return '';
-    var t='🃏 Poker Calculate By Ozzy\nזיטון = '+fmt(chipVal())+'\n\n';
+    var pt=potTotals();
+    var t='🃏 Poker Calculate By Ozzy\nזיטון = '+fmt(chipVal())+'\nבקופה: '+fmt(pt.money)+' ('+fmtC(pt.chips)+' זיטונים)\n\n';
     c.rows.forEach(function(r){t+=r.name+(c.best===r?' 👑':'')+': '+(r.net>0?'+':'')+fmt(r.net)+'\n';});
     t+='\nהעברות:\n';c.tr.forEach(function(x){t+=x.from+' משלם ל'+x.to+' '+fmt(x.amt)+'\n';});
     return t;
@@ -474,7 +501,20 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px
     var r=S.round;S=def();S.round=r;$('money').value=S.money;$('chips').value=S.chips;$('buyin').value=S.buyin;save();renderAll();toast('הכל נמחק');
   });
 
-  function renderAll(){renderRate();renderPlayers();renderSummary();}
+  var lastPot=null;
+  function potTotals(){
+    var m=0,n=0;S.players.forEach(function(p){m+=bought(p);n+=p.buys.length;});
+    return {money:m,chips:toChips(m),buys:n};
+  }
+  function renderPot(){
+    var t=potTotals();
+    $('potMoney').textContent=fmt(t.money);
+    $('potChips').textContent=valid()?fmtC(t.chips)+' זיטונים':'הגדירו ערך זיטון';
+    $('potMeta').textContent=S.players.length?(t.buys+' '+(t.buys===1?'קנייה':'קניות')+' של '+S.players.length+' '+(S.players.length===1?'שחקן':'שחקנים')):'';
+    if(lastPot!==null&&t.money>lastPot&&!reduce){var el=$('pot');el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+    lastPot=t.money;
+  }
+  function renderAll(){renderRate();renderPot();renderPlayers();renderSummary();}
   wasOk=true; /* no rain on first load */
   renderAll();
 })();
