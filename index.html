@@ -531,4 +531,59 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px
       if(c.tr.length){
         sig=JSON.stringify(c.tr);var deal=sig!==lastSig;
         h+='<ul class="transfers">'+c.tr.map(function(t,i){
-          return '<li'+(deal?'
+                  return '<li'+(deal?' class="deal" style="animation-delay:'+(i*.12)+'s"':'')+'><span class="mini-card" aria-hidden="true">'+SUITS[i%4]+'</span><span class="who">'+esc(t.from)+' משלם ל'+esc(t.to)+'</span><span class="amt">'+fmt(t.amt)+'</span></li>';
+        }).join('')+'</ul>';
+        h+='<div class="actions"><button class="primary" id="share">שתף בקבוצה</button><button class="ghost" id="copy">העתק סיכום</button></div>';
+      }else h+='<p class="hint" style="margin-top:12px">אף אחד לא חייב לאף אחד.</p>';
+    }
+    lastSig=sig;
+    box.innerHTML=h;
+    if(ok&&!wasOk)chipRain();
+    wasOk=ok;
+  }
+  function shareText(){
+    var c=last;if(!c)return '';
+    var pt=potTotals();
+    var t='🃏 Poker Calculate By Ozzy\nזיטון = '+fmt(chipVal())+'\nבקופה: '+fmt(pt.money)+' ('+fmtC(pt.chips)+' זיטונים)\n\n';
+    c.rows.forEach(function(r){t+=r.name+(c.best===r?' 👑':'')+': '+(r.net>0?'+':'')+fmt(r.net)+'\n';});
+    t+='\nהעברות:\n';c.tr.forEach(function(x){t+=x.from+' משלם ל'+x.to+' '+fmt(x.amt)+'\n';});
+    return t;
+  }
+  function copy(text){
+    function fallback(){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+      var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast(ok?'הסיכום הועתק':'לא הצלחתי להעתיק');}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(function(){toast('הסיכום הועתק');},fallback);else fallback();
+  }
+  $('summaryBody').addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;var text=shareText();
+    if(b.id==='copy')copy(text);
+    if(b.id==='share'){
+      if(navigator.share)navigator.share({text:text}).catch(function(err){if(err&&err.name!=='AbortError')copy(text);});
+      else copy(text);
+    }
+  });
+
+  /* reset */
+  function arm(btn,label,fn){
+    btn.addEventListener('click',function(){
+      if(btn.dataset.armed){fn();delete btn.dataset.armed;btn.textContent=label;return;}
+      btn.dataset.armed='1';btn.textContent='לחצו שוב לאישור';
+      setTimeout(function(){if(btn.dataset.armed){delete btn.dataset.armed;btn.textContent=label;}},3000);
+    });
+  }
+  arm($('resetKeep'),'ערב חדש עם אותם שחקנים',function(){
+    S.players.forEach(function(p){p.buys=S.buyin>0?[S.buyin]:[];p.final='';});save();renderAll();toast('התחיל ערב חדש');
+  });
+  arm($('resetAll'),'מחק הכל',function(){
+    var r=S.round;S=def();S.round=r;customOpen=false;$('money').value=S.money;$('chips').value=S.chips;$('buyin').value=S.buyin;save();renderAll();toast('הכל נמחק');
+  });
+
+  function renderAll(){renderRate();renderPot();renderPlayers();renderSummary();}
+  renderAll();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
