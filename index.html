@@ -203,6 +203,15 @@ td.num{direction:ltr;text-align:end;font-variant-numeric:tabular-nums}
 details.install{margin-top:12px;color:var(--muted);font-size:.95rem}
 details.install summary{cursor:pointer;font-weight:700;color:var(--ink)}
 footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:24px;direction:ltr}
+  .res{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
+.res-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.res-row:last-child{border-bottom:none}
+.res-main{flex:1;min-width:0}
+.res-main b{display:block;font-weight:800;font-size:1.05rem;overflow-wrap:anywhere}
+.res-sub{display:block;font-size:.88rem;color:var(--muted)}
+.res-net{font-family:"Secular One",sans-serif;font-size:1.3rem;white-space:nowrap;flex:none}
+.res-row.tot{background:var(--field)}
+.res-row.tot b{color:var(--pink)}
 
 /* flying chip + rain */
 .fly{position:fixed;z-index:40;width:30px;height:30px;pointer-events:none}
